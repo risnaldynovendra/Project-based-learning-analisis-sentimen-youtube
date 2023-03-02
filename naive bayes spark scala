@@ -1,0 +1,43 @@
+// from https://biercoff.com/easily-measuring-code-execution-time-in-scala/
+
+def time[R](block: => R): R = {
+    val t0 = System.nanoTime()
+    val result = block    // call-by-name
+    val t1 = System.nanoTime()
+    println("Elapsed time: " + (t1 - t0) + "ns")
+    result
+}
+
+///// time{ 2+2}
+
+import java.util.concurrent.TimeUnit
+val start = System.nanoTime()
+
+
+import org.apache.spark.mllib.classification.{NaiveBayes, NaiveBayesModel}
+import org.apache.spark.mllib.util.MLUtils
+
+// Load and parse the data file.
+val data = MLUtils.loadLibSVMFile(sc, "hasiltestt.txt")
+
+// Split data into training (80%) and test (20%).
+val Array(training, test) = data.randomSplit(Array(0.8, 0.2))
+
+val model = NaiveBayes.train(training, lambda = 1.0, modelType = "multinomial")
+
+val predictionAndLabel = test.map(p => (model.predict(p.features), p.label))
+val accuracy = 1.0 * predictionAndLabel.filter(x => x._1 == x._2).count() / test.count()
+
+// Save and load model
+//model.save(sc, "target/tmp/myNaiveBayesModel")
+//val sameModel = NaiveBayesModel.load(sc, "target/tmp/myNaiveBayesModel")
+
+
+val end = System.nanoTime()
+val difference = end - start
+println("Total execution time: " +  
+      TimeUnit.NANOSECONDS.toHours(difference) + " hours " +
+    ( TimeUnit.NANOSECONDS.toMinutes(difference) -  TimeUnit.HOURS.toMinutes(TimeUnit.NANOSECONDS.toHours(difference)))   + " min " +
+    ( TimeUnit.NANOSECONDS.toSeconds(difference) -  TimeUnit.MINUTES.toSeconds(TimeUnit.NANOSECONDS.toMinutes(difference))) + " sec " +
+      " - " + difference + " nSec (Total)")
+println("Completed")
